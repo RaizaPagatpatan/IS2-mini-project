@@ -1,53 +1,47 @@
-# Import modules for linear regression model
 import pandas as pd
 import tensorflow as tf
 
-
-# The following lines adjust the granularity of reporting. 
 pd.options.display.max_rows = 10
 pd.options.display.float_format = "{:.1f}".format
 
-# Load the .csv file into a pandas DataFrame
-# Import the dataset.
-training_df = pd.read_csv(filepath_or_buffer="ChocolateRatings.csv")
+training_df = pd.read_csv("ChocolateRatings.csv")
+print(training_df.head())
+print(training_df.describe())
 
-# Scale the label.
-training_df["median_house_value"] /= 1000.0
+# One-hot encode categorical variables
+training_df = pd.get_dummies(training_df, columns=['ref', 'company_manufacturer', 'company_location',
+                                                   'review_date', 'country_of_bean_origin', 'specific_bean_origin_or_bar_name',
+                                                   'cocoa_percent', 'ingredients', 'most_memorable_characteristics'])
 
-# Print the first rows of the pandas DataFrame.
-training_df.head()
+# Convert dataframe to float type
+training_df = training_df.astype(float)
 
 
-# @title Define the functions that build and train a model
-def build_model(my_learning_rate):
-    """Create and compile a simple linear regression model."""
+# Define the model
+def build_model(my_learning_rate, my_features):
+    """Create and compile a multiple linear regression model."""
     # Most simple tf.keras models are sequential.
     model = tf.keras.models.Sequential()
 
     # Describe the topography of the model.
-    # The topography of a simple linear regression model
-    # is a single node in a single layer.
+    # The topography of a multiple linear regression model
+    # is a single node in a single layer with the number of inputs equal to the number of features.
     model.add(tf.keras.layers.Dense(units=1,
-                                    input_shape=(1,)))
+                                    input_shape=(len(my_features),)))
 
     # Compile the model topography into code that TensorFlow can efficiently
     # execute. Configure training to minimize the model's mean squared error.
     model.compile(optimizer=tf.keras.optimizers.experimental.RMSprop(learning_rate=my_learning_rate),
                   loss="mean_squared_error",
                   metrics=[tf.keras.metrics.RootMeanSquaredError()])
-
     return model
 
 
-def train_model(model, df, feature, label, epochs, batch_size):
+def train_model(model, df, features, label, epochs, batch_size):
     """Train the model by feeding it data."""
-
     # Feed the model the feature and the label.
     # The model will train for the specified number of epochs.
-    history = model.fit(x=df[feature],
-                        y=df[label],
-                        batch_size=batch_size,
-                        epochs=epochs)
+    history = model.fit(x=df[features], y=df[label], batch_size=batch_size, epochs=epochs)
 
     # Gather the trained model's weight and bias.
     trained_weight = model.get_weights()[0]
@@ -62,7 +56,6 @@ def train_model(model, df, feature, label, epochs, batch_size):
     # To track the progression of training, we're going to take a snapshot
     # of the model's root mean squared error at each epoch.
     rmse = hist["root_mean_squared_error"]
-
     return trained_weight, trained_bias, epochs, rmse
 
 
